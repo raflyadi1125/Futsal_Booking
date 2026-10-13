@@ -28,7 +28,7 @@ export default function PublicLayout({ user, onLogout }) {
             {user ? (
               <>
                 <Link
-                  to="/booking"
+                  to="/bookings"
                   className="hidden text-sm font-medium text-slate-600 sm:block"
                 >
                   Booking Saya

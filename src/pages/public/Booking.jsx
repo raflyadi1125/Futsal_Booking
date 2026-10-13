@@ -22,6 +22,7 @@ export default function Booking({ user, bookings, setBookings }) {
   const [startTime, setStartTime] = useState("19:00");
   const [duration, setDuration] = useState("1");
   const [message, setMessage] = useState("");
+  const [createdBookingId, setCreatedBookingId] = useState("");
 
   const field = activeFields.find(
     (item) => String(item.id) === fieldId
@@ -32,6 +33,7 @@ export default function Booking({ user, bookings, setBookings }) {
   function handleSubmit(event) {
     event.preventDefault();
     setMessage("");
+    setCreatedBookingId("");
 
     if (!field) {
       setMessage("Silakan pilih lapangan yang tersedia.");
@@ -71,6 +73,7 @@ export default function Booking({ user, bookings, setBookings }) {
     };
 
     setBookings([newBooking, ...bookings]);
+    setCreatedBookingId(newBooking.id);
     setMessage("Pengajuan booking berhasil dibuat.");
   }
 
@@ -196,12 +199,30 @@ export default function Booking({ user, bookings, setBookings }) {
             )}
 
             {message.startsWith("Pengajuan") ? (
-              <Link
-                to="/fields"
-                className="block rounded-xl border border-slate-300 px-4 py-3 text-center font-semibold hover:bg-slate-50"
-              >
-                Kembali ke daftar lapangan
-              </Link>
+              <div className="space-y-3">
+                {createdBookingId && (
+                  <Link
+                    to={`/payment/${encodeURIComponent(createdBookingId)}`}
+                    className="block rounded-xl bg-emerald-600 px-4 py-3 text-center font-semibold text-white hover:bg-emerald-700"
+                  >
+                    Bayar Sekarang
+                  </Link>
+                )}
+
+                <Link
+                  to="/bookings"
+                  className="block rounded-xl border border-slate-300 px-4 py-3 text-center font-semibold hover:bg-slate-50"
+                >
+                  Lihat Booking Saya
+                </Link>
+
+                <Link
+                  to="/fields"
+                  className="block text-center text-sm text-slate-500 hover:text-slate-700"
+                >
+                  Kembali ke daftar lapangan
+                </Link>
+              </div>
             ) : (
               <button
                 type="submit"

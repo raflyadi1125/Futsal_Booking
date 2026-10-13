@@ -1,4 +1,5 @@
 
+import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   Trophy,
@@ -12,19 +13,22 @@ import {
 } from 'lucide-react';
 
 const menuItems = [
-  { label: 'Dashboard', icon: LayoutDashboard },
-  { label: 'Manajemen Lapangan', icon: Trophy },
-  { label: 'Manajemen Booking', icon: CalendarCheck },
-  { label: 'Pembayaran', icon: CreditCard },
-  { label: 'Laporan', icon: ChartNoAxesCombined },
+  { label: 'Dashboard', to: '/admin', end: true, icon: LayoutDashboard },
+  { label: 'Manajemen Lapangan', to: '/admin/fields', icon: Trophy },
+  { label: 'Manajemen Booking', to: '/admin/bookings', icon: CalendarCheck },
+  { label: 'Pembayaran', to: '/admin/payments', icon: CreditCard },
+  { label: 'Laporan', to: '/admin/reports', icon: ChartNoAxesCombined },
 ];
 
-export default function Sidebar({
-  activePage,
-  onNavigate,
-  open,
-  onClose,
-}) {
+function linkClass({ isActive }) {
+  return `flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm transition-colors ${
+    isActive
+      ? 'bg-blue-500/10 font-medium text-blue-300 ring-1 ring-inset ring-blue-400/15'
+      : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'
+  }`;
+}
+
+export default function Sidebar({ open, onClose }) {
   return (
     <>
       {open && (
@@ -73,55 +77,45 @@ export default function Sidebar({
           </p>
 
           <nav className="space-y-1">
-            {menuItems.map(({ label, icon: Icon }) => {
-              const active = activePage === label;
+            {menuItems.map(({ label, to, end, icon: Icon }) => (
+              <NavLink
+                key={label}
+                to={to}
+                end={end}
+                onClick={onClose}
+                className={linkClass}
+              >
+                <Icon size={19} />
+                <span>{label}</span>
 
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => {
-                    onNavigate(label);
-                    onClose();
-                  }}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm transition-colors ${
-                    active
-                      ? 'bg-blue-500/10 font-medium text-blue-300 ring-1 ring-inset ring-blue-400/15'
-                      : 'text-slate-400 hover:bg-slate-800/70 hover:text-slate-100'
-                  }`}
-                >
-                  <Icon size={19} />
-                  <span>{label}</span>
-
-                  {label === 'Pembayaran' && (
-                    <span className="ml-auto rounded-md bg-amber-400/10 px-2 py-0.5 text-xs text-amber-300">
-                      12
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+                {label === 'Pembayaran' && (
+                  <span className="ml-auto rounded-md bg-amber-400/10 px-2 py-0.5 text-xs text-amber-300">
+                    12
+                  </span>
+                )}
+              </NavLink>
+            ))}
           </nav>
         </div>
 
         <div className="mt-auto border-t border-slate-800 p-4">
-          <button
-            type="button"
-            onClick={() => alert('Pengaturan akan dibuat pada tahap berikutnya.')}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-400 hover:bg-slate-800 hover:text-white"
+          <NavLink
+            to="/admin/settings"
+            onClick={onClose}
+            className={linkClass}
           >
             <Settings size={19} />
             Pengaturan
-          </button>
+          </NavLink>
 
-          <button
-            type="button"
-            onClick={() => alert('Pusat bantuan belum tersedia.')}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm text-slate-400 hover:bg-slate-800 hover:text-white"
+          <NavLink
+            to="/admin/help"
+            onClick={onClose}
+            className={linkClass}
           >
             <CircleHelp size={19} />
             Pusat Bantuan
-          </button>
+          </NavLink>
 
           <div className="mt-4 flex items-center gap-3 border-t border-slate-800 pt-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-700 font-semibold text-slate-200">

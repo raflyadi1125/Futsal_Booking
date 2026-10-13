@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { demoUsers } from "../../data/authData";
@@ -24,7 +23,7 @@ export default function Login({ onLogin }) {
     event.preventDefault();
 
     const account = demoUsers.find(
-      (user) => user.id === userId && user.password === password
+      (user) => user.id === userId && user.password === password,
     );
 
     if (!account) {
@@ -118,8 +117,8 @@ export default function Login({ onLogin }) {
           <p className="font-semibold text-slate-800">Akun demo</p>
           <p className="mt-1">Password semua akun: user123</p>
           <p className="mt-2 text-xs leading-5">
-            Akun demo hanya untuk pengujian. Dalam aplikasi sebenarnya,
-            akun dan password dikelola secara aman oleh backend.
+            Akun demo hanya untuk pengujian. Dalam aplikasi sebenarnya, akun dan
+            password dikelola secara aman oleh backend.
           </p>
         </div>
       </div>

@@ -8,6 +8,7 @@ import {
   YAxis,
 } from "recharts";
 import { ArrowUpRight, CalendarDays, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import StatCard from "../../components/ui/StatCard";
 import StatusBadge from "../../components/ui/StatusBadge";
 import {
@@ -186,13 +187,12 @@ export default function Dashboard({ fields = [] }) {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new Event("open-bookings"))}
+          <Link
+            to="/admin/bookings"
             className="inline-flex items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300"
           >
             Lihat semua <ChevronRight size={16} />
-          </button>
+          </Link>
         </div>
 
         <div className="overflow-x-auto">
