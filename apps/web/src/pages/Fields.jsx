@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { initialFields, formatRupiah } from "../../data/mockData";
+import { initialFields, formatRupiah } from "../data/mockData";
 
 function getFacilities(facilities) {
   if (Array.isArray(facilities)) {
@@ -13,7 +13,6 @@ function getFacilities(facilities) {
       .map((item) => item.trim())
       .filter(Boolean);
   }
-
   return [];
 }
 

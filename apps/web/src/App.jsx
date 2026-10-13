@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Navigate,
@@ -14,30 +13,20 @@ import {
   initialPayments,
 } from "./data/mockData";
 
-import { demoUsers } from "./data/authData";
-
-import AdminLayout from "./components/layout/AdminLayout";
 import PublicLayout from "./components/layout/PublicLayout";
 
-import Home from "./pages/public/Home";
-import PublicFields from "./pages/public/Fields";
-import Login from "./pages/public/Login";
+import Login from "./auth/Login";
+
+import Home from "./pages/Home";
+import PublicFields from "./pages/Fields";
 import UserBooking from "./pages/public/Booking";
-import AdminLogin from "./pages/auth/AdminLogin";
+import AdminLayout from "./components/layout/AdminLayout";
 
 import Dashboard from "./pages/admin/Dashboard";
 import Fields from "./pages/admin/Fields";
 import Booking from "./pages/admin/Booking";
 import Payments from "./pages/admin/Payments";
 import Reports from "./pages/admin/Reports";
-
-const adminPages = [
-  "Dashboard",
-  "Manajemen Lapangan",
-  "Manajemen Booking",
-  "Pembayaran",
-  "Laporan",
-];
 
 function readSession(key) {
   try {
@@ -75,7 +64,7 @@ function RequireAdmin({ admin, children }) {
 
 function AdminPanel({
   admin,
-  onLogout,
+  setAdmin,
   fields,
   setFields,
   bookings,
@@ -86,21 +75,10 @@ function AdminPanel({
   const navigate = useNavigate();
   const [activePage, setActivePage] = useState("Dashboard");
 
-  function handleNavigate(page) {
-    if (adminPages.includes(page)) {
-      setActivePage(page);
-    }
-  }
-
-  function handleLogout() {
-    onLogout();
-    navigate("/admin/login", { replace: true });
-  }
-
   return (
     <AdminLayout
       activePage={activePage}
-      onNavigate={handleNavigate}
+      onNavigate={setActivePage}
     >
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-400">
@@ -112,7 +90,10 @@ function AdminPanel({
 
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={() => {
+            setAdmin(null);
+            navigate("/admin/login", { replace: true });
+          }}
           className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
         >
           Keluar dari Admin
@@ -164,53 +145,6 @@ export default function App() {
   const [bookings, setBookings] = useState(recentBookings);
   const [payments, setPayments] = useState(initialPayments);
 
-  function handleUserLogin(account) {
-    const validUser = demoUsers.find(
-      (item) => item.id === account.id
-    );
-
-    if (!validUser) {
-      return;
-    }
-
-    const sessionUser = {
-      id: validUser.id,
-      name: validUser.name,
-      email: validUser.email,
-    };
-
-    sessionStorage.setItem(
-      "futsal_user",
-      JSON.stringify(sessionUser)
-    );
-
-    setUser(sessionUser);
-  }
-
-  function handleAdminLogin(account) {
-    const sessionAdmin = {
-      name: account.name,
-      email: account.email,
-    };
-
-    sessionStorage.setItem(
-      "futsal_admin",
-      JSON.stringify(sessionAdmin)
-    );
-
-    setAdmin(sessionAdmin);
-  }
-
-  function handleUserLogout() {
-    sessionStorage.removeItem("futsal_user");
-    setUser(null);
-  }
-
-  function handleAdminLogout() {
-    sessionStorage.removeItem("futsal_admin");
-    setAdmin(null);
-  }
-
   return (
     <Routes>
       {/* Halaman publik */}
@@ -218,7 +152,7 @@ export default function App() {
         element={
           <PublicLayout
             user={user}
-            onLogout={handleUserLogout}
+            onLogout={() => setUser(null)}
           />
         }
       >
@@ -238,7 +172,7 @@ export default function App() {
             user ? (
               <Navigate to="/booking" replace />
             ) : (
-              <Login onLogin={handleUserLogin} />
+              <Login onLogin={setUser} />
             )
           }
         />
@@ -264,7 +198,7 @@ export default function App() {
           admin ? (
             <Navigate to="/admin" replace />
           ) : (
-            <AdminLogin onLogin={handleAdminLogin} />
+            <Login onLogin={setAdmin} />
           )
         }
       />
@@ -276,7 +210,7 @@ export default function App() {
           <RequireAdmin admin={admin}>
             <AdminPanel
               admin={admin}
-              onLogout={handleAdminLogout}
+              setAdmin={setAdmin}
               fields={fields}
               setFields={setFields}
               bookings={bookings}
