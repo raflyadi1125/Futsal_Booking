@@ -7,3 +7,172 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================
+// ENUM
+// ============================================================
+
+enum Role {
+  USER  // Pengguna (penyewa lapangan)
+  ADMIN // Admin (pengelola lapangan), dibuat lewat seed, tidak ada registrasi
+}
+
+enum BookingStatus {
+  PENDING   // Dibuat pengguna, menunggu pembayaran / konfirmasi
+  CONFIRMED // Dikonfirmasi admin (pembayaran lunas)
+  CANCELLED // Dibatalkan oleh pengguna atau admin
+  COMPLETED // Sudah selesai dimainkan
+}
+
+enum PaymentStatus {
+  UNPAID               // Belum bayar / belum lunas
+  WAITING_VERIFICATION // Bukti sudah diunggah, menunggu verifikasi admin
+  PAID                 // Lunas (diverifikasi admin)
+  REJECTED             // Bukti ditolak admin
+}
+
+// ============================================================
+// USER (Pengguna & Admin)
+// ============================================================
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  password  String // simpan dalam bentuk hash (bcrypt/argon2)
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings         Booking[]
+  verifiedPayments Payment[] @relation("PaymentVerifier")
+
+  @@map("users")
+}
+
+// ============================================================
+// VENUE, LAPANGAN, HARGA, JADWAL
+// ============================================================
+
+// Tempat futsal (lokasi) yang dikelola admin
+model Venue {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  city        String
+  description String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  fields         Field[]
+  operatingHours OperatingHour[]
+
+  @@index([city])
+  @@map("venues")
+}
+
+// Lapangan di dalam venue beserta harga sewa
+model Field {
+  id           String   @id @default(cuid())
+  venueId      String
+  name         String // contoh: "Lapangan A"
+  surfaceType  String? // contoh: "Vinyl", "Sintetis", "Interlock"
+  pricePerHour Int // harga per jam (Rupiah)
+  imageUrl     String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  venue          Venue           @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  bookings       Booking[]
+  scheduleBlocks ScheduleBlock[]
+
+  @@index([venueId])
+  @@index([pricePerHour])
+  @@map("fields")
+}
+
+// Jam operasional venue per hari (0 = Minggu ... 6 = Sabtu)
+model OperatingHour {
+  id        String  @id @default(cuid())
+  venueId   String
+  dayOfWeek Int // 0-6
+  openTime  String // format "HH:mm", contoh "08:00"
+  closeTime String // format "HH:mm", contoh "23:00"
+  isClosed  Boolean @default(false)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, dayOfWeek])
+  @@map("operating_hours")
+}
+
+// Pengaturan ketersediaan: blokir lapangan pada rentang waktu tertentu
+// (maintenance, event, libur, dll). Slot yang diblokir tidak bisa dipesan.
+model ScheduleBlock {
+  id        String   @id @default(cuid())
+  fieldId   String
+  startTime DateTime
+  endTime   DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+
+  field Field @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@index([fieldId, startTime, endTime])
+  @@map("schedule_blocks")
+}
+
+// ============================================================
+// PEMESANAN & PEMBAYARAN
+// ============================================================
+
+model Booking {
+  id            String        @id @default(cuid())
+  userId        String
+  fieldId       String
+  bookingDate   DateTime      @db.Date // tanggal bermain
+  startTime     DateTime // jam mulai (timestamp lengkap)
+  endTime       DateTime // jam selesai = startTime + durationHours
+  durationHours Int // durasi bermain (jam)
+  totalPrice    Int // snapshot harga: pricePerHour * durationHours
+  status        BookingStatus @default(PENDING)
+  cancelledAt   DateTime?
+  cancelReason  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  field   Field    @relation(fields: [fieldId], references: [id], onDelete: Restrict)
+  payment Payment?
+
+  // Dipakai untuk cek bentrok jadwal & lihat jadwal tersedia
+  @@index([fieldId, startTime, endTime])
+  @@index([fieldId, bookingDate])
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("bookings")
+}
+
+// Pembayaran via transfer + bukti pembayaran (1 booking : 1 payment)
+model Payment {
+  id           String        @id @default(cuid())
+  bookingId    String        @unique
+  amount       Int
+  method       String        @default("TRANSFER")
+  proofUrl     String? // URL bukti transfer yang diunggah pengguna
+  status       PaymentStatus @default(UNPAID)
+  uploadedAt   DateTime? // waktu bukti diunggah
+  verifiedById String? // admin yang memverifikasi
+  verifiedAt   DateTime?
+  note         String? // catatan admin (mis. alasan penolakan)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  booking    Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  verifiedBy User?   @relation("PaymentVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@map("payments")
+}

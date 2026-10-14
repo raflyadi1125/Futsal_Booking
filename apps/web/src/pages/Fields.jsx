@@ -1,6 +1,7 @@
 
 import { Link } from "react-router-dom";
-import { initialFields, formatRupiah } from "../../data/mockData";
+import { initialFields, formatRupiah } from "../data/mockData";
+import SearchForm from "../components/SearchForm";
 
 function getFacilities(facilities) {
   if (Array.isArray(facilities)) {
@@ -13,7 +14,6 @@ function getFacilities(facilities) {
       .map((item) => item.trim())
       .filter(Boolean);
   }
-
   return [];
 }
 
@@ -47,6 +47,10 @@ export default function Fields() {
           Lihat harga, jenis lapangan, dan fasilitas sebelum melakukan booking.
         </p>
       </div>
+
+    <div>
+      <SearchForm/>
+    </div>
 
       {availableFields.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-8 text-center">

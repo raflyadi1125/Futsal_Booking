@@ -1,10 +1,11 @@
-
 import { useState } from "react";
 import {
   Navigate,
   Route,
   Routes,
   useLocation,
+  useNavigate,
+  useSearchParams,
 } from "react-router-dom";
 
 import {
@@ -13,27 +14,29 @@ import {
   initialPayments,
 } from "./data/mockData";
 
-import { demoUsers } from "./data/authData";
-
-import AdminLayout from "./components/layout/AdminLayout";
 import PublicLayout from "./components/layout/PublicLayout";
 
-import Home from "./pages/public/Home";
-import PublicFields from "./pages/public/Fields";
-import Login from "./pages/public/Login";
+import Login from "./auth/Login";
+
+import Home from "./pages/Home";
+import PublicFields from "./pages/Fields";
 import UserBooking from "./pages/public/Booking";
+
 import MyBookings from "./pages/public/MyBookings";
 import UserPayment from "./pages/public/Payment";
 import NotFound from "./pages/public/NotFound";
-import AdminLogin from "./pages/auth/AdminLogin";
+
+import AdminLayout from "./components/layout/AdminLayout";
 
 import Dashboard from "./pages/admin/Dashboard";
 import Fields from "./pages/admin/Fields";
 import Booking from "./pages/admin/Booking";
 import Payments from "./pages/admin/Payments";
 import Reports from "./pages/admin/Reports";
+
 import Settings from "./pages/admin/Settings";
 import Help from "./pages/admin/Help";
+
 
 function readSession(key) {
   try {
@@ -42,6 +45,13 @@ function readSession(key) {
   } catch {
     return null;
   }
+}
+
+// Hanya terima tujuan internal (diawali "/") dari parameter ?next=
+function getSafeNext(value) {
+  return value && value.startsWith("/") && !value.startsWith("//")
+    ? value
+    : "";
 }
 
 function RequireUser({ user, children }) {
@@ -69,6 +79,98 @@ function RequireAdmin({ admin, children }) {
   return children;
 }
 
+// Halaman /login: kalau sudah login, arahkan sesuai peran
+function LoginRoute({ user, admin, onLogin }) {
+  const [searchParams] = useSearchParams();
+
+  if (admin) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (user) {
+    return (
+      <Navigate
+        to={getSafeNext(searchParams.get("next")) || "/"}
+        replace
+      />
+    );
+  }
+
+  return <Login onLogin={onLogin} />;
+}
+
+function AdminPanel({
+  admin,
+  setAdmin,
+  fields,
+  setFields,
+  bookings,
+  setBookings,
+  payments,
+  setPayments,
+
+}) {
+  const navigate = useNavigate();
+  const [activePage, setActivePage] = useState("Dashboard");
+
+  return (
+    <AdminLayout
+      activePage={activePage}
+      onNavigate={setActivePage}
+    >
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-slate-400">
+          Login sebagai{" "}
+          <span className="font-semibold text-slate-200">
+            {admin.name}
+          </span>
+        </p>
+
+        <button
+          type="button"
+          onClick={() => {
+            setAdmin(null);
+            navigate("/admin/login", { replace: true });
+          }}
+          className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
+        >
+          Keluar dari Admin
+        </button>
+      </div>
+
+      {activePage === "Dashboard" ? (
+        <Dashboard fields={fields} />
+      ) : activePage === "Manajemen Lapangan" ? (
+        <Fields
+          fields={fields}
+          setFields={setFields}
+        />
+      ) : activePage === "Manajemen Booking" ? (
+        <Booking
+          bookings={bookings}
+          setBookings={setBookings}
+        />
+      ) : activePage === "Pembayaran" ? (
+        <Payments
+          payments={payments}
+          setPayments={setPayments}
+        />
+      ) : activePage === "Laporan" ? (
+        <Reports
+          bookings={bookings}
+          payments={payments}
+          fields={fields}
+        />
+      ) : (
+        <p className="text-slate-400">
+          Halaman tidak ditemukan.
+        </p>
+      )}
+    </AdminLayout>
+  );
+}
+
+
 export default function App() {
   const [user, setUser] = useState(() =>
     readSession("futsal_user")
@@ -82,52 +184,22 @@ export default function App() {
   const [bookings, setBookings] = useState(recentBookings);
   const [payments, setPayments] = useState(initialPayments);
 
-  function handleUserLogin(account) {
-    const validUser = demoUsers.find(
-      (item) => item.id === account.id
-    );
-
-    if (!validUser) {
-      return;
+  // Satu pintu login: simpan ke sesi admin atau pengguna sesuai role
+  const handleLogin = (account) => {
+    if (account.role === "admin") {
+      setAdmin(account);
+    } else {
+      setUser(account);
     }
+  };
 
-    const sessionUser = {
-      id: validUser.id,
-      name: validUser.name,
-      email: validUser.email,
-    };
-
-    sessionStorage.setItem(
-      "futsal_user",
-      JSON.stringify(sessionUser)
-    );
-
-    setUser(sessionUser);
-  }
-
-  function handleAdminLogin(account) {
-    const sessionAdmin = {
-      name: account.name,
-      email: account.email,
-    };
-
-    sessionStorage.setItem(
-      "futsal_admin",
-      JSON.stringify(sessionAdmin)
-    );
-
-    setAdmin(sessionAdmin);
-  }
-
-  function handleUserLogout() {
-    sessionStorage.removeItem("futsal_user");
-    setUser(null);
-  }
-
-  function handleAdminLogout() {
-    sessionStorage.removeItem("futsal_admin");
+  const handleAdminLogout = () => {
     setAdmin(null);
-  }
+    try {
+      sessionStorage.removeItem("futsal_admin");
+    } catch {}
+  };
+
 
   return (
     <Routes>
@@ -136,7 +208,7 @@ export default function App() {
         element={
           <PublicLayout
             user={user}
-            onLogout={handleUserLogout}
+            onLogout={() => setUser(null)}
           />
         }
       >
@@ -153,11 +225,11 @@ export default function App() {
         <Route
           path="login"
           element={
-            user ? (
-              <Navigate to="/bookings" replace />
-            ) : (
-              <Login onLogin={handleUserLogin} />
-            )
+            <LoginRoute
+              user={user}
+              admin={admin}
+              onLogin={handleLogin}
+            />
           }
         />
 
@@ -207,14 +279,14 @@ export default function App() {
         />
       </Route>
 
-      {/* Login admin terpisah */}
+      {/* Login admin terpisah (tab Admin terpilih otomatis) */}
       <Route
         path="/admin/login"
         element={
           admin ? (
             <Navigate to="/admin" replace />
           ) : (
-            <AdminLogin onLogin={handleAdminLogin} />
+            <Login onLogin={handleLogin} defaultRole="admin" />
           )
         }
       />
@@ -226,7 +298,17 @@ export default function App() {
           <RequireAdmin admin={admin}>
             <AdminLayout
               admin={admin}
+
               onLogout={handleAdminLogout}
+
+              setAdmin={setAdmin}
+              fields={fields}
+              setFields={setFields}
+              bookings={bookings}
+              setBookings={setBookings}
+              payments={payments}
+              setPayments={setPayments}
+
             />
           </RequireAdmin>
         }

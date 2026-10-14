@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { initialFields, formatRupiah } from "../../data/mockData";
@@ -7,7 +6,7 @@ export default function Booking({ user, bookings, setBookings }) {
   const [searchParams] = useSearchParams();
 
   const activeFields = initialFields.filter(
-    (field) => field.status === "Aktif"
+    (field) => field.status === "Aktif",
   );
 
   const requestedId = searchParams.get("fieldId");
@@ -16,17 +15,16 @@ export default function Booking({ user, bookings, setBookings }) {
     activeFields[0];
 
   const [fieldId, setFieldId] = useState(
-    selectedField ? String(selectedField.id) : ""
+    selectedField ? String(selectedField.id) : "",
   );
-  const [date, setDate] = useState("");
+  // Tanggal default hari ini supaya form tidak tertahan validasi "required"
+  const [date, setDate] = useState(new Date().toLocaleDateString("en-CA"));
   const [startTime, setStartTime] = useState("19:00");
   const [duration, setDuration] = useState("1");
   const [message, setMessage] = useState("");
   const [createdBookingId, setCreatedBookingId] = useState("");
 
-  const field = activeFields.find(
-    (item) => String(item.id) === fieldId
-  );
+  const field = activeFields.find((item) => String(item.id) === fieldId);
 
   const price = field ? field.price * Number(duration) : 0;
 
@@ -48,8 +46,11 @@ export default function Booking({ user, bookings, setBookings }) {
     const [hours, minutes] = startTime.split(":").map(Number);
     const startMinutes = hours * 60 + minutes;
     const endMinutes = startMinutes + Number(duration) * 60;
-    const closingParts = field.closeTime.split(":").map(Number);
-    const closingMinutes = closingParts[0] * 60 + closingParts[1];
+
+    // Jam tutup: pakai 23:59 bila tidak ada, dan "00:00" dianggap tengah malam
+    const closingParts = (field.closeTime || "23:59").split(":").map(Number);
+    let closingMinutes = closingParts[0] * 60 + closingParts[1];
+    if (closingMinutes === 0) closingMinutes = 24 * 60;
 
     if (
       startMinutes < 0 ||
@@ -80,9 +81,7 @@ export default function Booking({ user, bookings, setBookings }) {
   return (
     <section className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-        <p className="text-sm font-semibold text-emerald-700">
-          FORM PEMESANAN
-        </p>
+        <p className="text-sm font-semibold text-emerald-700">FORM PEMESANAN</p>
         <h1 className="mt-2 text-3xl font-extrabold">Booking Lapangan</h1>
         <p className="mt-3 text-sm text-slate-600">
           Login sebagai {user.name}. Periksa jadwal dan harga sebelum mengirim
