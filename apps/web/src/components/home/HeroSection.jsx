@@ -58,7 +58,7 @@ export default function HeroSection() {
             </span>
           </h1>
 
-          {/* Garis aksen memanjang */}
+        
           <div
             className={`mt-4 h-1 rounded-full bg-gradient-to-r from-blue-500 to-sky-300 transition-all delay-500 duration-1000 ease-out motion-reduce:transition-none ${
               mounted ? "w-20" : "w-0"
