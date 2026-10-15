@@ -1,64 +1,31 @@
-
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
+import Navbar from "./navbar/Navbar";
 
 export default function PublicLayout({ user, onLogout }) {
-  const navClass = ({ isActive }) =>
-    `text-sm font-medium transition ${
-      isActive
-        ? "text-emerald-700"
-        : "text-slate-600 hover:text-emerald-700"
-    }`;
-
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <Link to="/" className="text-xl font-extrabold tracking-tight">
-            Futsal<span className="text-emerald-600">Booking</span>
-          </Link>
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+      <Navbar user={user} onLogout={onLogout} />
 
-          <nav className="flex items-center gap-4 sm:gap-6">
-            <NavLink to="/" end className={navClass}>
-              Beranda
-            </NavLink>
-            <NavLink to="/fields" className={navClass}>
-              Lapangan
-            </NavLink>
-
-            {user ? (
-              <>
-                <Link
-                  to="/bookings"
-                  className="hidden text-sm font-medium text-slate-600 sm:block"
-                >
-                  Booking Saya
-                </Link>
-                <button
-                  onClick={onLogout}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-50"
-                >
-                  Keluar
-                </button>
-              </>
-            ) : (
-              <Link
-                to="/login"
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-              >
-                Login
-              </Link>
-            )}
-          </nav>
-        </div>
-      </header>
-
-      <main>
+      <main className="flex-1">
         <Outlet />
       </main>
 
       <footer className="mt-16 border-t border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-6 text-sm text-slate-500 sm:px-6 lg:px-8">
-          © 2026 Futsal Booking. Pesan lapangan dengan mudah.
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-6 text-sm text-slate-500 sm:flex-row sm:px-6 lg:px-8">
+          <p className="flex items-center gap-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-blue-600 to-sky-400 text-xs">
+              ⚽
+            </span>
+            © 2026 Futsal Booking. Pesan lapangan dengan mudah.
+          </p>
+          <div className="flex items-center gap-4">
+            <Link to="/" className="transition hover:text-blue-600">
+              Beranda
+            </Link>
+            <Link to="/fields" className="transition hover:text-blue-600">
+              Lapangan
+            </Link>
+          </div>
         </div>
       </footer>
     </div>
