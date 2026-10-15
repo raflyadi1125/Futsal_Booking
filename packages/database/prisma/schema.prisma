@@ -124,9 +124,6 @@ model ScheduleBlock {
   @@map("schedule_blocks")
 }
 
-// ============================================================
-// PEMESANAN & PEMBAYARAN
-// ============================================================
 
 model Booking {
   id            String        @id @default(cuid())

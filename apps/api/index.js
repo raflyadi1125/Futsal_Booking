@@ -18,6 +18,10 @@ app.get("/api/fields", async (req, res) => {
   }
 });
 
+app.get("/", (req, res) => {
+  res.json({ message: "FutsalBook API berjalan" });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`API berjalan di http://localhost:${PORT}`);
