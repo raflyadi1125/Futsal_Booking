@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Navigate,
   Route,
@@ -37,13 +37,25 @@ import Reports from "./pages/admin/Reports";
 import Settings from "./pages/admin/Settings";
 import Help from "./pages/admin/Help";
 
-
 function readSession(key) {
   try {
     const value = sessionStorage.getItem(key);
     return value ? JSON.parse(value) : null;
   } catch {
     return null;
+  }
+}
+
+// Simpan nilai ke sesi; kalau null, hapus dari sesi
+function writeSession(key, value) {
+  try {
+    if (value) {
+      sessionStorage.setItem(key, JSON.stringify(value));
+    } else {
+      sessionStorage.removeItem(key);
+    }
+  } catch {
+    // abaikan jika storage tidak tersedia
   }
 }
 
@@ -108,7 +120,6 @@ function AdminPanel({
   setBookings,
   payments,
   setPayments,
-
 }) {
   const navigate = useNavigate();
   const [activePage, setActivePage] = useState("Dashboard");
@@ -170,7 +181,6 @@ function AdminPanel({
   );
 }
 
-
 export default function App() {
   const [user, setUser] = useState(() =>
     readSession("futsal_user")
@@ -184,6 +194,15 @@ export default function App() {
   const [bookings, setBookings] = useState(recentBookings);
   const [payments, setPayments] = useState(initialPayments);
 
+  // Sesi login tetap tersimpan saat halaman di-refresh
+  useEffect(() => {
+    writeSession("futsal_user", user);
+  }, [user]);
+
+  useEffect(() => {
+    writeSession("futsal_admin", admin);
+  }, [admin]);
+
   // Satu pintu login: simpan ke sesi admin atau pengguna sesuai role
   const handleLogin = (account) => {
     if (account.role === "admin") {
@@ -195,11 +214,7 @@ export default function App() {
 
   const handleAdminLogout = () => {
     setAdmin(null);
-    try {
-      sessionStorage.removeItem("futsal_admin");
-    } catch {}
   };
-
 
   return (
     <Routes>
@@ -298,9 +313,7 @@ export default function App() {
           <RequireAdmin admin={admin}>
             <AdminLayout
               admin={admin}
-
               onLogout={handleAdminLogout}
-
               setAdmin={setAdmin}
               fields={fields}
               setFields={setFields}
@@ -308,7 +321,6 @@ export default function App() {
               setBookings={setBookings}
               payments={payments}
               setPayments={setPayments}
-
             />
           </RequireAdmin>
         }

@@ -43,6 +43,9 @@ export default function Login({ onLogin, defaultRole = "user" }) {
 
   const isAdmin = role === "admin";
 
+  // Ada tujuan yang menunggu (misalnya pengguna menekan Booking sebelum login)
+  const nextPath = getSafeNext(searchParams.get("next"));
+
   function handleRoleChange(nextRole) {
     setRole(nextRole);
     setPassword("");
@@ -91,7 +94,7 @@ export default function Login({ onLogin, defaultRole = "user" }) {
       email: cleanEmail,
       role: "user",
     });
-    navigate(getSafeNext(searchParams.get("next")) || REDIRECT_BY_ROLE.user, {
+    navigate(nextPath || REDIRECT_BY_ROLE.user, {
       replace: true,
     });
   }
@@ -120,6 +123,12 @@ export default function Login({ onLogin, defaultRole = "user" }) {
                 : "Isi nama dan email Anda, lalu gunakan password yang diberikan."}
             </p>
           </div>
+
+          {!isAdmin && nextPath && (
+            <p className="mt-4 rounded-lg bg-amber-500/10 px-3 py-2.5 text-xs leading-5 text-amber-300">
+              Silakan login terlebih dahulu untuk melanjutkan booking.
+            </p>
+          )}
 
           <div
             role="tablist"

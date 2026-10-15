@@ -40,7 +40,7 @@ export default function FieldCard({ field }) {
             <span className="text-xs text-slate-500"> /jam</span>
           </p>
           <Link
-            to={`/fields/${id}`}
+            to={`/booking?fieldId=${id}`}
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white! transition hover:bg-blue-700"
           >
             <Icon name="calendar" className="h-3.5 w-3.5" />
