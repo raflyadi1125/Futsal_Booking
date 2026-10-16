@@ -203,30 +203,49 @@ export default function App() {
     writeSession("futsal_admin", admin);
   }, [admin]);
 
-  // Satu pintu login: simpan ke sesi admin atau pengguna sesuai role
+
+  // Satu pintu login: simpan sesuai role
   const handleLogin = (account) => {
-    if (account.role === "admin") {
-      setAdmin(account);
+    const normalizedAccount = {
+      ...account,
+      role: String(account.role).toLowerCase(),
+    };
+
+    if (normalizedAccount.role === "admin") {
+      sessionStorage.removeItem("futsal_user");
+      setUser(null);
+      setAdmin(normalizedAccount);
     } else {
-      setUser(account);
+      sessionStorage.removeItem("futsal_admin");
+      setAdmin(null);
+      setUser(normalizedAccount);
     }
   };
 
+  // Logout admin dan kembali ke beranda publik
   const handleAdminLogout = () => {
+    sessionStorage.removeItem("futsal_admin");
     setAdmin(null);
+    window.location.href = "/";
   };
 
   return (
     <Routes>
       {/* Halaman publik */}
-      <Route
-        element={
-          <PublicLayout
-            user={user}
-            onLogout={() => setUser(null)}
-          />
-        }
-      >
+      
+        <Route
+          element={
+             <PublicLayout
+              user={user}
+              onLogout={() => {
+                sessionStorage.removeItem("futsal_user");
+                setUser(null);
+                window.location.href = "/";
+              }}
+            />
+          }
+        >
+
         <Route
           index
           element={<Home />}

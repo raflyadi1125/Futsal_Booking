@@ -8,9 +8,6 @@ const ADMIN_ACCOUNT = {
   password: "admin123",
 };
 
-// Password bersama untuk semua pengguna. Email dan nama diisi sendiri oleh pengguna.
-const USER_PASSWORD = "user123";
-
 // Tujuan setelah login untuk tiap peran. Sesuaikan dengan route di App.jsx.
 const REDIRECT_BY_ROLE = {
   admin: "/admin",
@@ -36,10 +33,10 @@ export default function Login({ onLogin, defaultRole = "user" }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [role, setRole] = useState(defaultRole);
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const isAdmin = role === "admin";
 
@@ -52,51 +49,73 @@ export default function Login({ onLogin, defaultRole = "user" }) {
     setError("");
   }
 
-  function handleSubmit(event) {
+  
+ 
+  async function handleSubmit(event) {
     event.preventDefault();
+
+    if (loading) return;
 
     const cleanEmail = email.trim().toLowerCase();
 
-    if (isAdmin) {
-      if (
-        cleanEmail !== ADMIN_ACCOUNT.email ||
-        password !== ADMIN_ACCOUNT.password
-      ) {
-        setError("Email atau password admin tidak sesuai.");
-        return;
+    setError("");
+    setLoading(true);
+
+    try {
+      const apiUrl =
+        import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: cleanEmail,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Login gagal.");
       }
 
-      onLogin({
-        id: "admin",
-        name: ADMIN_ACCOUNT.name,
-        email: ADMIN_ACCOUNT.email,
-        role: "admin",
-      });
-      navigate(REDIRECT_BY_ROLE.admin, { replace: true });
-      return;
+      if (!data.user || !data.token) {
+        throw new Error("Respons login dari server tidak lengkap.");
+      }
+
+      const account = {
+        ...data.user,
+        role: String(data.user.role).toLowerCase(),
+        token: data.token,
+      };
+
+      if (isAdmin && account.role !== "admin") {
+        throw new Error("Akun ini bukan akun administrator.");
+      }
+
+      if (!isAdmin && account.role !== "user") {
+        throw new Error("Silakan gunakan tab Admin untuk akun ini.");
+      }
+
+      onLogin(account);
+
+      if (account.role === "admin") {
+        navigate("/admin", { replace: true });
+      } else {
+        navigate(nextPath || "/", { replace: true });
+      }
+    } catch (err) {
+      setError(
+        err instanceof TypeError
+          ? "Tidak dapat terhubung ke server. Pastikan backend berjalan."
+          : err.message || "Terjadi kesalahan saat login."
+      );
+    } finally {
+      setLoading(false);
     }
-
-    const cleanName = username.trim();
-
-    if (!cleanName) {
-      setError("Nama pengguna wajib diisi.");
-      return;
-    }
-
-    if (password !== USER_PASSWORD) {
-      setError("Password tidak sesuai.");
-      return;
-    }
-
-    onLogin({
-      id: cleanEmail,
-      name: cleanName,
-      email: cleanEmail,
-      role: "user",
-    });
-    navigate(nextPath || REDIRECT_BY_ROLE.user, {
-      replace: true,
-    });
   }
 
   return (
@@ -120,7 +139,7 @@ export default function Login({ onLogin, defaultRole = "user" }) {
             <p className="mt-1.5 text-xs leading-5 text-slate-400">
               {isAdmin
                 ? "Khusus pengelola untuk mengakses dashboard dan mengelola operasional lapangan."
-                : "Isi nama dan email Anda, lalu gunakan password yang diberikan."}
+                : "Masuk menggunakan email dan password akun yang telah terdaftar."}
             </p>
           </div>
 
@@ -157,27 +176,6 @@ export default function Login({ onLogin, defaultRole = "user" }) {
           </div>
 
           <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-            {!isAdmin && (
-              <div>
-                <label
-                  htmlFor="loginUsername"
-                  className="mb-1 block text-xs font-medium"
-                >
-                  Nama pengguna
-                </label>
-                <input
-                  id="loginUsername"
-                  type="text"
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  autoComplete="name"
-                  required
-                  placeholder="Nama Anda"
-                  className={inputClass}
-                />
-              </div>
-            )}
-
             <div>
               <label
                 htmlFor="loginEmail"
@@ -224,9 +222,14 @@ export default function Login({ onLogin, defaultRole = "user" }) {
 
             <button
               type="submit"
+              disabled={loading}
               className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500"
             >
-              {isAdmin ? "Masuk ke Dashboard" : "Masuk"}
+              {loading
+              ? "Memproses..."
+              : isAdmin
+              ? "Masuk ke Dashboard"
+              : "Masuk"}
             </button>
           </form>
 
