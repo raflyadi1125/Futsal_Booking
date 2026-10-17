@@ -79,6 +79,12 @@ model Field {
   name         String // contoh: "Lapangan A"
   surfaceType  String? // contoh: "Vinyl", "Sintetis", "Interlock"
   pricePerHour Int // harga per jam (Rupiah)
+  
+  capacity     Int      @default(10)
+  facilities   String   @default("")
+  openingTime  String   @default("08:00")
+  closingTime  String   @default("23:00")
+
   imageUrl     String?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())

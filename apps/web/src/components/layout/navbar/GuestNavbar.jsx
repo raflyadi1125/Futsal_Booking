@@ -29,7 +29,7 @@ export default function GuestNavbar() {
         <div className="hidden items-center gap-3 md:flex">
           <Link
             to="/login"
-            className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md motion-reduce:transform-none"
+            className="rounded-full bg-blue-600 px-5 py-2 text-sm font-semibold !text-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-md motion-reduce:transform-none"
           >
             Login
           </Link>

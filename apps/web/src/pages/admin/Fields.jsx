@@ -1,5 +1,4 @@
-
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Plus,
   Search,
@@ -15,6 +14,59 @@ import {
 import { formatRupiah } from "../../data/mockData";
 import StatusBadge from "../../components/ui/StatusBadge";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+function getAdminToken() {
+  const account = JSON.parse(
+    sessionStorage.getItem("futsal_admin") || "null"
+  );
+
+  return account?.token;
+}
+
+async function adminRequest(path, options = {}) {
+  const token = getAdminToken();
+
+  if (!token) {
+    throw new Error("Token admin tidak ditemukan. Silakan login kembali.");
+  }
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message || "Permintaan ke server gagal.");
+  }
+
+  return data;
+}
+
+function mapField(field) {
+  const hours = field.venue?.operatingHours?.find(
+    (item) => !item.isClosed
+  );
+
+  return {
+    ...field,
+    type: field.surfaceType || "Vinyl",
+    price: field.pricePerHour,
+    status: field.isActive ? "Aktif" : "Nonaktif",
+    capacity: field.capacity ?? 10,
+    facilities: field.facilities ?? "",
+    openingTime: hours?.openTime || "08:00",
+    closingTime: hours?.closeTime || "23:00",
+    venueId: field.venueId,
+  };
+}
+
 const emptyForm = {
   name: "",
   type: "Vinyl",
@@ -24,11 +76,12 @@ const emptyForm = {
   closingTime: "23:00",
   facilities: "",
   status: "Aktif",
+  venueId: "",
 };
 
 const fieldTypes = ["Vinyl", "Rumput Sintetis", "Parquette", "Semen"];
 
-function FieldModal({ initialData, onClose, onSave }) {
+function FieldModal({ initialData, venues = [], onClose, onSave }) {
   const [form, setForm] = useState(() =>
     initialData
       ? {
@@ -148,6 +201,34 @@ function FieldModal({ initialData, onClose, onSave }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 p-6">
+          <div className="sm:col-span-2">
+  <label className={labelClass} htmlFor="venueId">
+    Venue
+  </label>
+
+  <select
+    id="venueId"
+    name="venueId"
+    value={form.venueId}
+    onChange={handleChange}
+    className={inputClass}
+    required
+  >
+    <option value="">Pilih venue</option>
+    {venues.map((venue) => (
+      <option key={venue.id} value={venue.id}>
+        {venue.name}
+      </option>
+    ))}
+  </select>
+
+  {venues.length === 0 && (
+    <p className="mt-2 text-sm text-amber-400">
+      Belum ada venue yang tersedia. Tambahkan venue terlebih dahulu.
+    </p>
+  )}
+</div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={labelClass} htmlFor="name">
@@ -331,6 +412,53 @@ export default function Fields({ fields = [], setFields }) {
   const [statusFilter, setStatusFilter] = useState("Semua");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFields() {
+      try {
+        setLoading(true);
+        setErrorMessage("");
+
+        const data = await adminRequest("/api/fields/admin");
+
+        if (!cancelled) {
+          setFields(data.map(mapField));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(error.message);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadFields();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const venues = [
+  ...new Map(
+    fields
+      .filter((field) => field.venue)
+      .map((field) => [
+        field.venue.id,
+        {
+          id: field.venue.id,
+          name: field.venue.name,
+        },
+      ])
+    ).values(),
+  ];
 
   const activeCount = fields.filter(
     (field) => field.status === "Aktif",
@@ -372,59 +500,79 @@ export default function Fields({ fields = [], setFields }) {
     setEditingField(null);
   }
 
-  function saveField(formData) {
-    if (typeof setFields !== "function") {
-      setErrorMessage();
-      return;
-    }
+  async function saveField(formData) {
+  try {
+    setErrorMessage("");
+
+    const payload = {
+      name: formData.name,
+      surfaceType: formData.type,
+      pricePerHour: Number(formData.price),
+      capacity: Number(formData.capacity),
+      facilities: formData.facilities,
+      openingTime: formData.openingTime,
+      closingTime: formData.closingTime,
+      isActive: formData.status === "Aktif",
+    };
 
     if (editingField) {
-      setFields((previous) =>
-        previous.map((field) =>
-          field.id === editingField.id
-            ? { ...field, ...formData }
-            : field,
-        ),
-      );
+      await adminRequest(`/api/fields/${editingField.id}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
     } else {
-      const newField = {
-        id:
-          fields.length > 0
-            ? Math.max(...fields.map((field) => field.id)) + 1
-            : 1,
-        ...formData,
-      };
-
-      setFields((previous) => [...previous, newField]);
+      await adminRequest("/api/fields", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
     }
 
+    const data = await adminRequest("/api/fields/admin");
+    setFields(data.map(mapField));
     closeModal();
+  } catch (error) {
+    setErrorMessage(error.message);
   }
+}
 
-  function deleteField(field) {
-    const confirmed = window.confirm(
-      `Yakin ingin menghapus ${field.name}?`,
-    );
+  async function deleteField(field) {
+  const confirmed = window.confirm(
+    `Yakin ingin menghapus ${field.name}?`
+  );
 
-    if (!confirmed) return;
+  if (!confirmed) return;
 
-    setFields((previous) =>
-      previous.filter((item) => item.id !== field.id),
-    );
+  try {
+    setErrorMessage("");
+
+    await adminRequest(`/api/fields/${field.id}`, {
+      method: "DELETE",
+    });
+
+    const data = await adminRequest("/api/fields/admin");
+    setFields(data.map(mapField));
+  } catch (error) {
+    setErrorMessage(error.message);
   }
+}
 
-  function toggleStatus(field) {
-    const nextStatus =
-      field.status === "Aktif" ? "Nonaktif" : "Aktif";
+ async function toggleStatus(field) {
+  try {
+    setErrorMessage("");
 
-    setFields((previous) =>
-      previous.map((item) =>
-        item.id === field.id
-          ? { ...item, status: nextStatus }
-          : item,
-      ),
-    );
+    await adminRequest(`/api/fields/${field.id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        isActive: field.status !== "Aktif",
+      }),
+    });
+
+    const data = await adminRequest("/api/fields/admin");
+    setFields(data.map(mapField));
+  } catch (error) {
+    setErrorMessage(error.message);
   }
+}
 
   const summaryCards = [
     {
@@ -501,6 +649,28 @@ export default function Fields({ fields = [], setFields }) {
           );
         })}
       </div>
+
+      {loading && (
+  <p className="rounded-lg bg-slate-900 p-4 text-sm text-slate-300">
+    Memuat data lapangan dari database...
+  </p>
+)}
+
+{errorMessage && (
+  <div
+    role="alert"
+    className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300"
+  >
+    {errorMessage}
+    <button
+      type="button"
+      onClick={() => window.location.reload()}
+      className="ml-3 underline"
+    >
+      Coba lagi
+    </button>
+  </div>
+)}
 
       <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/70">
         <div className="flex flex-col gap-3 border-b border-slate-800 p-4 md:flex-row md:items-center md:justify-between">
@@ -677,6 +847,7 @@ export default function Fields({ fields = [], setFields }) {
       {modalOpen && (
         <FieldModal
           initialData={editingField}
+          venues={venues}
           onClose={closeModal}
           onSave={saveField}
         />

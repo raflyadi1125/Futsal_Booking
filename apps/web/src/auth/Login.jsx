@@ -243,10 +243,7 @@ export default function Login({ onLogin, defaultRole = "user" }) {
               </p>
             ) : (
               <p>
-                Password: {USER_PASSWORD}{" "}
-                <span className="text-slate-400">
-                  · nama dan email bebas diisi
-                </span>
+                Contoh akun: andi@futsal.test / user123
               </p>
             )}
           </div>

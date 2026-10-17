@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { initialFields, formatRupiah } from "../data/mockData";
+import { formatRupiah } from "../data/mockData";
+import { initialFields } from "../data/mockData";
 import SearchForm from "../components/SearchForm";
 import useInView from "../hooks/useInView";
 
